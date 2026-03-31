@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VibriAlert</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>VibriAlert</h1>
+
+    <input type="number" id="duration" placeholder="Total duration (hours)">
+    <input type="number" id="interval" placeholder="Interval (minutes)">
+
+    <select id="intensity">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+    </select>
+
+    <button onclick="startVibration()">START</button>
+    <button class="stop" onclick="stopVibration()">STOP</button>
+
+    <p id="status">Status: Stopped</p>
+</div>
+
+<script src="script.js"></script>
+
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js")
+        .then(() => console.log("Service Worker Registered"));
+}
+</script>
+
+</body>
+</html>
