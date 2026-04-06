@@ -1,91 +1,117 @@
-
+// Global variables
 let intervalId;
-let stopTimeout;
-let countdownTimer;
+let vibrationLoopId;
+let countdownId;
 
 let isRunning = false;
-let remainingTime = 0; // seconds
-let totalDurationSet = false;
+let remainingTime = 0;
 
+
+// Vibration patterns
 function getVibrationPattern(intensity) {
     if (intensity === "low") return [200, 100, 200];
     if (intensity === "medium") return [400, 200, 400];
-    if (intensity === "high") return [800, 200, 800];
+    if (intensity === "high") return [800, 300, 800];
 }
 
-function startVibration() {
-    let intervalMin = parseInt(document.getElementById("interval").value);
-    let durationHr = parseInt(document.getElementById("duration").value);
-    let intensity = document.getElementById("intensity").value;
 
-    if ((!intervalMin || intervalMin <= 0) || (!durationHr || durationHr <= 0 && !totalDurationSet)) {
-        alert("Enter valid interval and duration");
+// Start function
+function startVibration() {
+
+    let interval = parseInt(document.getElementById("interval").value);
+    let intensity = document.getElementById("intensity").value;
+    let startTime = document.getElementById("startTime").value;
+    let endTime = document.getElementById("endTime").value;
+
+    if (!interval || interval <= 0 || !startTime || !endTime) {
+        alert("Enter all valid inputs");
         return;
     }
 
     let pattern = getVibrationPattern(intensity);
-
-    let intervalMs = intervalMin * 60 * 1000;
-
-    // First start
-    if (!totalDurationSet) {
-        remainingTime = durationHr * 3600;
-        totalDurationSet = true;
-    }
-
     isRunning = true;
+
     document.getElementById("status").innerText = "Status: Running";
 
-    // 🔁 Interval vibration (NO nested loops now)
+    // Start countdown
+    startCountdown(interval);
+
+    // Main interval loop
     intervalId = setInterval(() => {
-        if (isRunning && navigator.vibrate) {
-            navigator.vibrate(pattern);
+
+        let now = new Date();
+
+        let start = new Date();
+        let end = new Date();
+
+        let [sh, sm] = startTime.split(":");
+        let [eh, em] = endTime.split(":");
+
+        start.setHours(sh, sm, 0);
+        end.setHours(eh, em, 0);
+
+        if (now >= start && now <= end && isRunning) {
+
+            // Continuous vibration loop
+            vibrationLoopId = setInterval(() => {
+                if (navigator.vibrate && isRunning) {
+                    navigator.vibrate(pattern);
+                }
+            }, 700);
+
+            // Stop vibration after interval
+            setTimeout(() => {
+                clearInterval(vibrationLoopId);
+            }, interval * 1000);
         }
-    }, intervalMs);
 
-    // ⏱ Auto stop
-    stopTimeout = setTimeout(() => {
-        stopVibration(true);
-        alert("Time completed!");
-    }, remainingTime * 1000);
+        // Restart countdown every interval
+        startCountdown(interval);
 
-    // ⏳ Countdown
-    countdownTimer = setInterval(() => {
-        if (remainingTime > 0) {
-            remainingTime--;
+    }, interval * 1000);
+}
 
-            let h = Math.floor(remainingTime / 3600);
-            let m = Math.floor((remainingTime % 3600) / 60);
-            let s = remainingTime % 60;
 
-            document.getElementById("status").innerText =
-                `Running - Time left: ${h}h ${m}m ${s}s`;
+// Countdown function
+function startCountdown(seconds) {
+
+    clearInterval(countdownId);
+
+    remainingTime = seconds;
+
+    updateCountdownDisplay();
+
+    countdownId = setInterval(() => {
+        remainingTime--;
+
+        updateCountdownDisplay();
+
+        if (remainingTime <= 0) {
+            clearInterval(countdownId);
         }
     }, 1000);
 }
 
-function stopVibration(auto = false) {
+
+// Update countdown on screen
+function updateCountdownDisplay() {
+    document.getElementById("countdown").innerText =
+        "Next vibration in: " + remainingTime + " sec";
+}
+
+
+// Stop function
+function stopVibration() {
     isRunning = false;
 
     clearInterval(intervalId);
-    clearTimeout(stopTimeout);
-    clearInterval(countdownTimer);
+    clearInterval(vibrationLoopId);
+    clearInterval(countdownId);
 
-    navigator.vibrate(0); // stops vibration instantly
-
-    if (!auto) {
-        document.getElementById("status").innerText =
-            `Paused - Time left: ${formatTime(remainingTime)}`;
-    } else {
-        document.getElementById("status").innerText = "Completed";
-        totalDurationSet = false;
-        remainingTime = 0;
+    if (navigator.vibrate) {
+        navigator.vibrate(0);
     }
-}
 
-function formatTime(seconds) {
-    let h = Math.floor(seconds / 3600);
-    let m = Math.floor((seconds % 3600) / 60);
-    let s = seconds % 60;
-    return `${h}h ${m}m ${s}s`;
+    document.getElementById("status").innerText = "Status: Stopped";
+    document.getElementById("countdown").innerText = "";
 }
