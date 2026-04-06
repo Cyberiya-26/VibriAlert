@@ -49,6 +49,10 @@ button.stop {
     background: #ff4444;
 }
 
+button.fullstop {
+    background: #888;
+}
+
 h1 {
     margin-bottom: 20px;
 }
@@ -62,12 +66,11 @@ h1 {
 
     <label>From Time:</label>
     <input type="time" id="startTime">
-    <p id="countdown"></p>
 
     <label>To Time:</label>
     <input type="time" id="endTime">
 
-    <input type="number" id="interval" placeholder="Interval (seconds)">
+    <input type="number" id="interval" placeholder="Interval (minutes)">
 
     <select id="intensity">
         <option value="low">Low</option>
@@ -76,39 +79,49 @@ h1 {
     </select>
 
     <button onclick="startVibration()">START</button>
-    <button class="stop" onclick="stopVibration()">STOP</button>
+    <button class="stop" onclick="stopVibration()">STOP VIBRATION</button>
+    <button class="fullstop" onclick="fullStop()">FULL STOP</button>
 
     <p id="status">Status: Stopped</p>
 </div>
 
 <script>
-let intervalId;
-let vibrationLoopId;
+// Global variables
+let intervalTimer;
+let vibrationTimer;
 let isRunning = false;
 
+
+// Vibration patterns
 function getVibrationPattern(intensity) {
     if (intensity === "low") return [200, 100, 200];
     if (intensity === "medium") return [400, 200, 400];
     if (intensity === "high") return [800, 300, 800];
 }
 
+
+// Start function
 function startVibration() {
-    let interval = document.getElementById("interval").value;
+
+    let intervalMin = parseFloat(document.getElementById("interval").value);
     let intensity = document.getElementById("intensity").value;
     let startTime = document.getElementById("startTime").value;
     let endTime = document.getElementById("endTime").value;
 
-    if (!interval || interval <= 0 || !startTime || !endTime) {
-        alert("Enter all valid inputs");
+    if (!intervalMin || intervalMin <= 0 || !startTime || !endTime) {
+        alert("Enter valid inputs");
         return;
     }
 
+    let intervalMs = intervalMin * 60 * 1000;
     let pattern = getVibrationPattern(intensity);
+
     isRunning = true;
 
-    document.getElementById("status").innerText = "Status: Running";
+    document.getElementById("status").innerText = "Status: Waiting for next alert...";
 
-    intervalId = setInterval(() => {
+    // Main interval loop
+    intervalTimer = setInterval(() => {
 
         let now = new Date();
 
@@ -121,29 +134,51 @@ function startVibration() {
         start.setHours(sh, sm, 0);
         end.setHours(eh, em, 0);
 
+        // Check if within time range
         if (now >= start && now <= end && isRunning) {
 
-            // Continuous vibration inside interval
-            vibrationLoopId = setInterval(() => {
-                if (navigator.vibrate && isRunning) {
-                    navigator.vibrate(pattern);
-                }
-            }, 700);
+            startContinuousVibration(pattern);
 
-            // Stop vibration after interval ends
-            setTimeout(() => {
-                clearInterval(vibrationLoopId);
-            }, interval * 1000);
         }
 
-    }, interval * 1000);
+    }, intervalMs);
 }
 
+
+// Continuous vibration
+function startContinuousVibration(pattern) {
+
+    document.getElementById("status").innerText = "Status: Vibrating... Press STOP";
+
+    clearInterval(vibrationTimer);
+
+    vibrationTimer = setInterval(() => {
+        if (navigator.vibrate && isRunning) {
+            navigator.vibrate(pattern);
+        }
+    }, 800);
+}
+
+
+// Stop only vibration
 function stopVibration() {
+
+    clearInterval(vibrationTimer);
+
+    if (navigator.vibrate) {
+        navigator.vibrate(0);
+    }
+
+    document.getElementById("status").innerText = "Status: Waiting for next alert...";
+}
+
+
+// Full stop everything
+function fullStop() {
     isRunning = false;
 
-    clearInterval(intervalId);
-    clearInterval(vibrationLoopId);
+    clearInterval(intervalTimer);
+    clearInterval(vibrationTimer);
 
     if (navigator.vibrate) {
         navigator.vibrate(0);
@@ -154,4 +189,4 @@ function stopVibration() {
 </script>
 
 </body>
-</html>                
+</html>
