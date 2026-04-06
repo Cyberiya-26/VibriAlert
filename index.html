@@ -2,21 +2,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>VibriAlert</title>
+<meta charset="UTF-8">
+<title>VibriAlert</title>
 
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#121212">
+<style>
+body {
+    font-family: Arial;
+    background: #121212;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    text-align: center;
+    background: #1e1e1e;
+    padding: 30px;
+    border-radius: 10px;
+    width: 300px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 5px;
+}
+
+label {
+    display: block;
+    margin-top: 10px;
+    text-align: left;
+    font-size: 14px;
+}
+
+button {
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+}
+
+button.stop {
+    background: #ff4444;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+</style>
+
 </head>
-
 <body>
 
 <div class="container">
     <h1>VibriAlert</h1>
 
-    <input type="number" id="duration" placeholder="Total duration (hours)">
-    <input type="number" id="interval" placeholder="Interval (minutes)">
+    <label>From Time:</label>
+    <input type="time" id="startTime">
+    <p id="countdown"></p>
+
+    <label>To Time:</label>
+    <input type="time" id="endTime">
+
+    <input type="number" id="interval" placeholder="Interval (seconds)">
 
     <select id="intensity">
         <option value="low">Low</option>
@@ -30,14 +81,77 @@
     <p id="status">Status: Stopped</p>
 </div>
 
-<script src="script.js"></script>
-
 <script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js")
-        .then(() => console.log("Service Worker Registered"));
+let intervalId;
+let vibrationLoopId;
+let isRunning = false;
+
+function getVibrationPattern(intensity) {
+    if (intensity === "low") return [200, 100, 200];
+    if (intensity === "medium") return [400, 200, 400];
+    if (intensity === "high") return [800, 300, 800];
+}
+
+function startVibration() {
+    let interval = document.getElementById("interval").value;
+    let intensity = document.getElementById("intensity").value;
+    let startTime = document.getElementById("startTime").value;
+    let endTime = document.getElementById("endTime").value;
+
+    if (!interval || interval <= 0 || !startTime || !endTime) {
+        alert("Enter all valid inputs");
+        return;
+    }
+
+    let pattern = getVibrationPattern(intensity);
+    isRunning = true;
+
+    document.getElementById("status").innerText = "Status: Running";
+
+    intervalId = setInterval(() => {
+
+        let now = new Date();
+
+        let start = new Date();
+        let end = new Date();
+
+        let [sh, sm] = startTime.split(":");
+        let [eh, em] = endTime.split(":");
+
+        start.setHours(sh, sm, 0);
+        end.setHours(eh, em, 0);
+
+        if (now >= start && now <= end && isRunning) {
+
+            // Continuous vibration inside interval
+            vibrationLoopId = setInterval(() => {
+                if (navigator.vibrate && isRunning) {
+                    navigator.vibrate(pattern);
+                }
+            }, 700);
+
+            // Stop vibration after interval ends
+            setTimeout(() => {
+                clearInterval(vibrationLoopId);
+            }, interval * 1000);
+        }
+
+    }, interval * 1000);
+}
+
+function stopVibration() {
+    isRunning = false;
+
+    clearInterval(intervalId);
+    clearInterval(vibrationLoopId);
+
+    if (navigator.vibrate) {
+        navigator.vibrate(0);
+    }
+
+    document.getElementById("status").innerText = "Status: Stopped";
 }
 </script>
 
 </body>
-</html>
+</html>                
