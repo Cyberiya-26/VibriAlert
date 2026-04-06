@@ -1,10 +1,8 @@
-// Global variables
-let intervalId;
-let vibrationLoopId;
-let countdownId;
 
+// Global variables
+let intervalTimer;
+let vibrationTimer;
 let isRunning = false;
-let remainingTime = 0;
 
 
 // Vibration patterns
@@ -18,26 +16,25 @@ function getVibrationPattern(intensity) {
 // Start function
 function startVibration() {
 
-    let interval = parseInt(document.getElementById("interval").value);
+    let intervalMin = parseFloat(document.getElementById("interval").value);
     let intensity = document.getElementById("intensity").value;
     let startTime = document.getElementById("startTime").value;
     let endTime = document.getElementById("endTime").value;
 
-    if (!interval || interval <= 0 || !startTime || !endTime) {
-        alert("Enter all valid inputs");
+    if (!intervalMin || intervalMin <= 0 || !startTime || !endTime) {
+        alert("Enter valid inputs");
         return;
     }
 
+    let intervalMs = intervalMin * 60 * 1000; // minutes → ms
     let pattern = getVibrationPattern(intensity);
+
     isRunning = true;
 
-    document.getElementById("status").innerText = "Status: Running";
-
-    // Start countdown
-    startCountdown(interval);
+    document.getElementById("status").innerText = "Status: Waiting for next alert...";
 
     // Main interval loop
-    intervalId = setInterval(() => {
+    intervalTimer = setInterval(() => {
 
         let now = new Date();
 
@@ -50,68 +47,58 @@ function startVibration() {
         start.setHours(sh, sm, 0);
         end.setHours(eh, em, 0);
 
+        // Only trigger if within time range
         if (now >= start && now <= end && isRunning) {
 
-            // Continuous vibration loop
-            vibrationLoopId = setInterval(() => {
-                if (navigator.vibrate && isRunning) {
-                    navigator.vibrate(pattern);
-                }
-            }, 700);
+            // Start continuous vibration
+            startContinuousVibration(pattern);
 
-            // Stop vibration after interval
-            setTimeout(() => {
-                clearInterval(vibrationLoopId);
-            }, interval * 1000);
         }
 
-        // Restart countdown every interval
-        startCountdown(interval);
-
-    }, interval * 1000);
+    }, intervalMs);
 }
 
 
-// Countdown function
-function startCountdown(seconds) {
+// Function to start continuous vibration
+function startContinuousVibration(pattern) {
 
-    clearInterval(countdownId);
+    document.getElementById("status").innerText = "Status: Vibrating... Press STOP";
 
-    remainingTime = seconds;
+    // Prevent multiple loops
+    clearInterval(vibrationTimer);
 
-    updateCountdownDisplay();
-
-    countdownId = setInterval(() => {
-        remainingTime--;
-
-        updateCountdownDisplay();
-
-        if (remainingTime <= 0) {
-            clearInterval(countdownId);
+    vibrationTimer = setInterval(() => {
+        if (navigator.vibrate && isRunning) {
+            navigator.vibrate(pattern);
         }
-    }, 1000);
+    }, 800); // repeat vibration every 0.8 sec
 }
 
 
-// Update countdown on screen
-function updateCountdownDisplay() {
-    document.getElementById("countdown").innerText =
-        "Next vibration in: " + remainingTime + " sec";
-}
-
-
-// Stop function
+// STOP function
 function stopVibration() {
+
+    // Stop vibration ONLY (not interval timer)
+    clearInterval(vibrationTimer);
+
+    if (navigator.vibrate) {
+        navigator.vibrate(0);
+    }
+
+    document.getElementById("status").innerText = "Status: Waiting for next alert...";
+}
+
+
+// OPTIONAL: Full reset (if you want separate button)
+function fullStop() {
     isRunning = false;
 
-    clearInterval(intervalId);
-    clearInterval(vibrationLoopId);
-    clearInterval(countdownId);
+    clearInterval(intervalTimer);
+    clearInterval(vibrationTimer);
 
     if (navigator.vibrate) {
         navigator.vibrate(0);
     }
 
     document.getElementById("status").innerText = "Status: Stopped";
-    document.getElementById("countdown").innerText = "";
 }
